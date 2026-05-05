@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestor de Tareas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #E2DDD4;
+    --border2: #CCC8BE;
+    --text: #1A1815;
+    --text2: #6B6760;
+    --text3: #A09C96;
+    --accent: #2D5016;
+    --accent-light: #EAF0E1;
+    --accent-mid: #4A7C28;
+    --amber: #7A4F00;
+    --amber-light: #FDF3DC;
+    --red: #7A1A1A;
+    --red-light: #FDF0F0;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--accent);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: #A8D47A;
+    border-radius: 50%;
+  }
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.04em;
+  }
+
+  /* LAYOUT */
+  .main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* STATS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+  }
+  .stat-num {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-num.green { color: var(--accent-mid); }
+  .stat-num.amber { color: var(--amber); }
+  .stat-num.red   { color: var(--red); }
+  .stat-lbl { font-size: 11px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* PANEL */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title .dot {
+    width: 6px; height: 6px;
+    background: var(--accent-mid);
+    border-radius: 50%;
+  }
+  .toggle-icon {
+    font-size: 16px;
+    color: var(--text3);
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+  .panel-body { padding: 1.25rem; }
+  .panel.collapsed .panel-body { display: none; }
+  .panel.collapsed .toggle-icon { transform: rotate(-90deg); }
+
+  /* FORM */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text2);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    transition: border-color 0.15s;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus { border-color: var(--accent-mid); }
+  .field input[readonly] { color: var(--text3); cursor: default; }
+  .field textarea { resize: vertical; min-height: 68px; line-height: 1.5; }
+  .field.full { grid-column: 1 / -1; }
+
+  .form-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .btn {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    outline: none;
+    border: 1px solid transparent;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border2);
+    color: var(--text2);
+  }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-primary:hover { background: #3A6820; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  /* FILTERS */
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+  .filters select {
+    padding: 6px 28px 6px 10px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23A09C96'/%3E%3C/svg%3E") no-repeat right 10px center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    cursor: pointer;
+  }
+  .filters select:focus { border-color: var(--accent-mid); }
+  .filter-count {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    margin-left: auto;
+  }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    font-size: 10px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  tbody tr.done { opacity: 0.5; }
+  tbody tr.done td:not(.no-strike) .cell-text { text-decoration: line-through; }
+  td {
+    padding: 10px 10px;
+    vertical-align: middle;
+    color: var(--text);
+  }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 100px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .badge-done    { background: var(--accent-light); color: var(--accent); }
+  .badge-pending { background: var(--surface2); color: var(--text2); }
+  .badge-today   { background: var(--amber-light); color: var(--amber); }
+  .badge-late    { background: var(--red-light); color: var(--red); }
+
+  .tipo-badge {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text2);
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* CHECKBOX */
+  .cb-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  input[type="checkbox"] {
+    width: 16px; height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-mid);
+  }
+
+  /* DELETE */
+  .del-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text3);
+    font-size: 16px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .del-btn:hover { color: var(--red); }
+
+  /* EMPTY */
+  .empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text3);
+    font-size: 13px;
+  }
+  .empty-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.4;
+  }
+
+  /* TOAST */
+  #toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-family: var(--mono);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+
+  /* DESCRIPTION truncate */
+  .desc-cell { max-width: 220px; }
+  .desc-cell .cell-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--text2);
+    font-size: 12px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    header { padding: 0 1rem; }
+    .main { padding: 1rem; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .form-grid { grid-template-columns: 1fr; }
+  }
+
+  /* SELECT custom arrow */
+  .field select {
+    background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23A09C96'/%3E%3C/svg%3E") no-repeat right 10px center;
+    padding-right: 28px;
+  }
+
+  .required-star { color: var(--red); margin-left: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Gestor de Tareas
+  </div>
+  <div class="header-meta" id="headerDate"></div>
+</header>
+
+<div class="main">
+
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <!-- FORM PANEL -->
+  <div class="panel" id="formPanel">
+    <div class="panel-header" onclick="togglePanel('formPanel')">
+      <div class="panel-title"><div class="dot"></div> Nueva tarea</div>
+      <span class="toggle-icon">&#8964;</span>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Tipo <span class="required-star">*</span></label>
+          <select id="fTipo">
+            <option value="">— Seleccionar —</option>
+            <option>Administrativa</option>
+            <option>Comercial</option>
+            <option>Operativa</option>
+            <option>Financiera</option>
+            <option>Soporte</option>
+            <option>Proyecto</option>
+            <option>Otra</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Empresa <span class="required-star">*</span></label>
+          <input type="text" id="fEmpresa" placeholder="Nombre de la empresa" />
+        </div>
+        <div class="field">
+          <label>Encargado <span class="required-star">*</span></label>
+          <input type="text" id="fEncargado" placeholder="Nombre del responsable" />
+        </div>
+        <div class="field">
+          <label>Fecha de creación</label>
+          <input type="text" id="fCreacion" readonly />
+        </div>
+        <div class="field">
+          <label>Fecha de entrega</label>
+          <input type="date" id="fEntrega" />
+        </div>
+        <div class="field full">
+          <label>Descripción <span class="required-star">*</span></label>
+          <textarea id="fDesc" placeholder="Describe la tarea a realizar..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="clearForm()">Limpiar</button>
+        <button class="btn btn-primary" onclick="saveTask()">Guardar tarea</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE PANEL -->
+  <div class="panel">
+    <div class="panel-header" onclick="togglePanel(this.closest('.panel'))">
+      <div class="panel-title"><div class="dot"></div> Tareas registradas</div>
+      <span class="toggle-icon">&#8964;</span>
+    </div>
+    <div class="panel-body">
+      <div class="filters">
+        <select id="fEstado" onchange="renderTable()">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="completada">Completadas</option>
+        </select>
+        <select id="fEmpresaF" onchange="renderTable()">
+          <option value="">Todas las empresas</option>
+        </select>
+        <select id="fTipoF" onchange="renderTable()">
+          <option value="">Todos los tipos</option>
+        </select>
+        <span class="filter-count" id="filterCount"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px;"></th>
+              <th style="width:100px;">Tipo</th>
+              <th style="width:120px;">Empresa</th>
+              <th style="width:110px;">Encargado</th>
+              <th style="width:90px;">Creación</th>
+              <th style="width:90px;">Entrega</th>
+              <th>Descripción</th>
+              <th style="width:90px;">Estado</th>
+              <th style="width:32px;"></th>
+            </tr>
+          </thead>
+          <tbody id="taskBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="emptyMsg" style="display:none;">
+        <div class="empty-icon">&#9744;</div>
+        No hay tareas que mostrar.<br>Crea la primera usando el formulario de arriba.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'gestor_tareas_v2';
+let tasks = [];
+
+function todayStr() {
+  return new Date().toLocaleDateString('es-GT', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    tasks = raw ? JSON.parse(raw) : [];
+  } catch(e) { tasks = []; }
+}
+
+function saveToStorage() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch(e) {}
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function togglePanel(el) {
+  const panel = typeof el === 'string' ? document.getElementById(el) : el;
+  panel.classList.toggle('collapsed');
+}
+
+function clearForm() {
+  document.getElementById('fTipo').selectedIndex = 0;
+  document.getElementById('fEmpresa').value = '';
+  document.getElementById('fEncargado').value = '';
+  document.getElementById('fEntrega').value = '';
+  document.getElementById('fDesc').value = '';
+}
+
+function saveTask() {
+  const tipo = document.getElementById('fTipo').value;
+  const empresa = document.getElementById('fEmpresa').value.trim();
+  const encargado = document.getElementById('fEncargado').value.trim();
+  const entrega = document.getElementById('fEntrega').value;
+  const desc = document.getElementById('fDesc').value.trim();
+
+  if (!tipo || !empresa || !encargado || !desc) {
+    showToast('Completa los campos requeridos (*)');
+    return;
+  }
+
+  tasks.unshift({
+    id: Date.now(),
+    tipo, empresa, encargado,
+    creacion: todayStr(),
+    entrega: entrega || '',
+    descripcion: desc,
+    completada: false
+  });
+
+  saveToStorage();
+  clearForm();
+  renderAll();
+  showToast('Tarea guardada');
+}
+
+function toggleDone(id) {
+  const t = tasks.find(t => t.id === id);
+  if (t) t.completada = !t.completada;
+  saveToStorage();
+  renderAll();
+}
+
+function deleteTask(id) {
+  if (!confirm('¿Eliminar esta tarea?')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  saveToStorage();
+  renderAll();
+  showToast('Tarea eliminada');
+}
+
+function getStatus(task) {
+  if (task.completada) return { label: 'Completada', cls: 'badge-done', key: 'completada' };
+  if (!task.entrega)   return { label: 'Pendiente',  cls: 'badge-pending', key: 'pendiente' };
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const ent = new Date(task.entrega + 'T00:00:00');
+  if (ent < hoy)                              return { label: 'Vencida',    cls: 'badge-late',    key: 'pendiente' };
+  if (ent.toDateString() === hoy.toDateString()) return { label: 'Vence hoy', cls: 'badge-today', key: 'pendiente' };
+  return { label: 'Pendiente', cls: 'badge-pending', key: 'pendiente' };
+}
+
+function fmtDate(str) {
+  if (!str) return '—';
+  const [y,m,d] = str.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function renderStats() {
+  const total = tasks.length;
+  const done  = tasks.filter(t => t.completada).length;
+  const hoy   = new Date(); hoy.setHours(0,0,0,0);
+  const late  = tasks.filter(t => !t.completada && t.entrega && new Date(t.entrega+'T00:00:00') < hoy).length;
+  const pend  = total - done;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-lbl">Total tareas</div></div>
+    <div class="stat-card"><div class="stat-num">${pend}</div><div class="stat-lbl">Pendientes</div></div>
+    <div class="stat-card"><div class="stat-num green">${done}</div><div class="stat-lbl">Completadas</div></div>
+    <div class="stat-card"><div class="stat-num red">${late}</div><div class="stat-lbl">Vencidas</div></div>
+  `;
+}
+
+function renderFilters() {
+  const empresas = [...new Set(tasks.map(t => t.empresa))].sort();
+  const tipos    = [...new Set(tasks.map(t => t.tipo))].sort();
+
+  const selE = document.getElementById('fEmpresaF');
+  const selT = document.getElementById('fTipoF');
+  const curE = selE.value, curT = selT.value;
+
+  selE.innerHTML = '<option value="">Todas las empresas</option>' +
+    empresas.map(e => `<option value="${e}">${e}</option>`).join('');
+  selT.innerHTML = '<option value="">Todos los tipos</option>' +
+    tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+
+  selE.value = curE;
+  selT.value = curT;
+}
+
+function renderTable() {
+  const fE = document.getElementById('fEstado').value;
+  const fEm = document.getElementById('fEmpresaF').value;
+  const fT = document.getElementById('fTipoF').value;
+
+  const filtered = tasks.filter(t => {
+    const st = getStatus(t);
+    if (fE  && st.key !== fE)  return false;
+    if (fEm && t.empresa !== fEm) return false;
+    if (fT  && t.tipo !== fT)  return false;
+    return true;
+  });
+
+  document.getElementById('filterCount').textContent =
+    filtered.length !== tasks.length
+      ? `${filtered.length} de ${tasks.length} tareas`
+      : `${tasks.length} tarea${tasks.length !== 1 ? 's' : ''}`;
+
+  const body  = document.getElementById('taskBody');
+  const empty = document.getElementById('emptyMsg');
+
+  if (filtered.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  body.innerHTML = filtered.map(t => {
+    const st = getStatus(t);
+    return `<tr class="${t.completada ? 'done' : ''}">
+      <td class="no-strike cb-wrap">
+        <input type="checkbox" ${t.completada ? 'checked' : ''} onchange="toggleDone(${t.id})" />
+      </td>
+      <td><span class="tipo-badge cell-text">${t.tipo}</span></td>
+      <td><span class="cell-text">${t.empresa}</span></td>
+      <td><span class="cell-text">${t.encargado}</span></td>
+      <td><span class="cell-text" style="font-family:var(--mono);font-size:11px;">${t.creacion}</span></td>
+      <td><span class="cell-text" style="font-family:var(--mono);font-size:11px;">${fmtDate(t.entrega)}</span></td>
+      <td class="desc-cell"><span class="cell-text">${t.descripcion}</span></td>
+      <td class="no-strike"><span class="badge ${st.cls}">${st.label}</span></td>
+      <td class="no-strike"><button class="del-btn" onclick="deleteTask(${t.id})" title="Eliminar">&#215;</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderStats();
+  renderFilters();
+  renderTable();
+}
+
+function init() {
+  const now = new Date();
+  document.getElementById('fCreacion').value = todayStr();
+  document.getElementById('headerDate').textContent =
+    now.toLocaleDateString('es-GT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  loadFromStorage();
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
